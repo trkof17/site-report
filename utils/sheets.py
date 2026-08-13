@@ -11,22 +11,39 @@ def get_sheets_client():
         'https://www.googleapis.com/auth/drive'
     ]
     try:
-        # Secrets'tan credentials'ı al
+        # Secrets kontrolü
         if 'google' not in st.secrets:
             st.error("❌ Secrets'ta 'google' bölümü bulunamadı!")
+            st.info(f"📋 Mevcut secrets anahtarları: {list(st.secrets.keys())}")
+            return None
+        
+        # Credentials kontrolü
+        if 'credentials' not in st.secrets['google']:
+            st.error("❌ 'google' bölümünde 'credentials' anahtarı bulunamadı!")
+            st.info(f"📋 google içindeki anahtarlar: {list(st.secrets['google'].keys())}")
             return None
         
         # JSON'ı yükle
         creds_json = st.secrets['google']['credentials']
-        creds_dict = json.loads(creds_json)
+        st.info(f"📄 Credentials uzunluğu: {len(creds_json)} karakter")
         
-        # DOĞRUDAN ServiceAccountCredentials ile dene
+        try:
+            creds_dict = json.loads(creds_json)
+            st.success("✅ JSON başarıyla parse edildi!")
+        except json.JSONDecodeError as e:
+            st.error(f"❌ JSON parse hatası: {str(e)}")
+            st.code(creds_json[:500] + "...", language="json")
+            return None
+        
+        # Bağlan
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         return client
         
     except Exception as e:
         st.error(f"Google Sheets bağlantı hatası: {str(e)}")
+        import traceback
+        st.code(traceback.format_exc())
         return None
 
 def append_lead(sheet_name, email, company, project_name, error_count, total_manhours):

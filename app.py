@@ -6,6 +6,7 @@ from utils.auth import sign_up, sign_in, sign_out
 from utils.db import get_user_projects, create_project, add_daily_report, add_bulk_reports, get_project_reports
 from utils.parser import load_excel, detect_errors, calculate_metrics
 from utils.supabase_client import get_supabase
+from utils.db import get_user_projects, create_project, add_daily_report, add_bulk_reports, get_project_reports
 
 st.set_page_config(page_title="Site Report Intelligence", page_icon="🏗️")
 
@@ -277,3 +278,71 @@ elif reports:
         
 else:
     st.info("Henüz bu projeye ait rapor yok. Veri girişi yapın veya Excel yükleyin.")
+    
+    
+# --- LEAD CAPTURE (Email Toplama) ---
+st.divider()
+st.subheader("🚀 Ücretsiz Rapor Analizi İstiyorum")
+
+# Mevcut projedeki hata sayısını hesapla
+reports, _ = get_project_reports(project_id)
+error_count = 0
+total_manhours = 0
+if reports:
+    import pandas as pd
+    df_temp = pd.DataFrame(reports)
+    error_count = df_temp.isnull().sum().sum()
+    total_manhours = df_temp['actual_manpower'].sum() if 'actual_manpower' in df_temp else 0
+
+with st.container():
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.markdown(f"""
+        **📊 Raporunuzu analiz edelim ve size özel bir özet gönderelim.**
+
+        - 🔍 Mevcut verilerinizde **{error_count}** potansiyel hata tespit edildi.
+        - 📈 İşçilik, makine ve maliyet özeti çıkaralım.
+        - 🎯 Projenizin durumunu değerlendirelim.
+
+        **Üstelik tamamen ücretsiz!**
+        """)
+    with col2:
+        st.info("""
+        ✅ **Ne Kazanırsınız?**
+        - Hata raporu
+        - Performans özeti
+        - İyileştirme önerileri
+        """)
+
+with st.form("lead_capture_form"):
+    col1, col2 = st.columns(2)
+    with col1:
+        lead_email = st.text_input("📧 Email Adresiniz", placeholder="ornek@firma.com")
+    with col2:
+        lead_company = st.text_input("🏢 Şirket Adı", placeholder="Şirket Adı")
+    
+    lead_phone = st.text_input("📱 Telefon (Opsiyonel)", placeholder="5XX XXX XX XX")
+    
+    st.caption(f"🔍 Mevcut verilerinizde **{error_count}** potansiyel hata var. Bu raporu ücretsiz analiz edelim.")
+    
+    submitted = st.form_submit_button("📩 Ücretsiz Rapor Analizi İstiyorum", use_container_width=True)
+    
+    if submitted:
+        if not lead_email or not lead_company:
+            st.warning("Lütfen email ve şirket adını girin.")
+        else:
+            from utils.sheets import append_lead
+            success = append_lead(
+                "Site Report Leads",
+                lead_email.strip(),
+                lead_company.strip(),
+                selected_project,
+                error_count,
+                total_manhours
+            )
+            if success:
+                st.success("✅ Başvurunuz alındı! Rapor analizinizi emailinize gönderiyoruz.")
+                st.balloons()
+                st.info("📧 Emailinizi kontrol edin. Önümüzdeki 24 saat içinde detaylı rapor gönderilecektir.")
+            else:
+                st.error("❌ Kayıt sırasında bir sorun oluştu. Lütfen tekrar deneyin.")

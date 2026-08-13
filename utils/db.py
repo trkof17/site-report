@@ -48,9 +48,7 @@ def get_user_projects():
         return None, str(e)
 
 def add_bulk_reports(project_id, df):
-    """
-    DataFrame'deki tüm satırları toplu olarak daily_reports tablosuna ekler.
-    """
+    """DataFrame'deki tüm satırları toplu olarak daily_reports tablosuna ekler."""
     supabase = get_supabase()
     try:
         records = []
@@ -81,5 +79,22 @@ def get_project_reports(project_id):
     try:
         response = supabase.table("daily_reports").select("*").eq("project_id", project_id).execute()
         return response.data, None
+    except Exception as e:
+        return None, str(e)
+
+def add_lead(email, company, project_id, error_count, total_manhours):
+    """Lead'i Supabase'e kaydet"""
+    supabase = get_supabase()
+    try:
+        data = {
+            "email": email,
+            "company": company,
+            "project_id": project_id,
+            "error_count": error_count,
+            "total_manhours": total_manhours,
+            "status": "new"
+        }
+        response = supabase.table("leads").insert(data).execute()
+        return response.data[0], None
     except Exception as e:
         return None, str(e)

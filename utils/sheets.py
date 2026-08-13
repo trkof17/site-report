@@ -11,19 +11,20 @@ def get_sheets_client():
         'https://www.googleapis.com/auth/drive'
     ]
     try:
-        # Secrets'dan credential'ları oku
+        # Secrets'tan credentials'ı al
         if 'google' not in st.secrets:
             st.error("❌ Secrets'ta 'google' bölümü bulunamadı!")
             return None
         
-        # JSON'ı parse et
+        # JSON'ı yükle
         creds_json = st.secrets['google']['credentials']
         creds_dict = json.loads(creds_json)
         
-        # Gspread ile bağlan
+        # DOĞRUDAN ServiceAccountCredentials ile dene
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         client = gspread.authorize(creds)
         return client
+        
     except Exception as e:
         st.error(f"Google Sheets bağlantı hatası: {str(e)}")
         return None
@@ -35,7 +36,7 @@ def append_lead(sheet_name, email, company, project_name, error_count, total_man
         if not client:
             return False
         
-        # Sheets adını Secrets'tan al veya parametreyi kullan
+        # Sheets adını Secrets'tan al
         if 'google' in st.secrets and 'sheet_name' in st.secrets['google']:
             sheet_name = st.secrets['google']['sheet_name']
         

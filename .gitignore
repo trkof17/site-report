@@ -3,34 +3,19 @@ venv/
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
 
 # Environment
 .env
 .venv
-env/
-venv/
 
-# Credentials
+# Credentials (gizli bilgiler)
 credentials/
 *.json
 
-# Streamlit
+# Streamlit local
 .streamlit/
 secrets.toml
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db

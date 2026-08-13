@@ -86,12 +86,13 @@ def add_lead(email, company, project_id, error_count, total_manhours):
     """Lead'i Supabase'e kaydet"""
     supabase = get_supabase()
     try:
+        # Verileri JSON uyumlu hale getir (int64 vb. sorunları çözmek için)
         data = {
-            "email": email,
-            "company": company,
-            "project_id": project_id,
-            "error_count": error_count,
-            "total_manhours": total_manhours,
+            "email": str(email),
+            "company": str(company),
+            "project_id": str(project_id),
+            "error_count": int(error_count) if error_count is not None else 0,
+            "total_manhours": float(total_manhours) if total_manhours is not None else 0.0,
             "status": "new"
         }
         response = supabase.table("leads").insert(data).execute()

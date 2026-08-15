@@ -313,6 +313,7 @@ with st.form("lead_capture_form"):
             result, err = add_lead(
                 lead_email.strip(),
                 lead_company.strip(),
+                lead_phone.strip(),
                 project_id,
                 error_count,
                 total_manhours

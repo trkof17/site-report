@@ -90,6 +90,7 @@ def add_lead(email, company, project_id, error_count, total_manhours):
         data = {
             "email": str(email),
             "company": str(company),
+            "phone": str(phone) if phone else None,  # Yeni alan
             "project_id": str(project_id),
             "error_count": int(error_count) if error_count is not None else 0,
             "total_manhours": float(total_manhours) if total_manhours is not None else 0.0,

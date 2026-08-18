@@ -3,9 +3,10 @@ from datetime import timedelta
 import streamlit as st
 import matplotlib.pyplot as plt
 from utils.auth import sign_up, sign_in, sign_out
-from utils.db import get_user_projects, create_project, add_daily_report, add_bulk_reports, get_project_reports, add_lead
+from utils.db import get_user_projects, create_project, add_daily_report, add_bulk_reports, get_project_reports
 from utils.parser import load_excel, detect_errors, calculate_metrics
 from utils.supabase_client import get_supabase
+from utils.db import get_user_projects, create_project, add_daily_report, add_bulk_reports, get_project_reports
 
 st.set_page_config(page_title="Site Report Intelligence", page_icon="🏗️")
 
@@ -207,9 +208,10 @@ elif reports:
     import pandas as pd
     df_reports = pd.DataFrame(reports)
     
-    # Tarih sütununu datetime'a çevir
+    # Tarih sütununu datetime'a çevir (öncelikle)
     df_reports['report_date'] = pd.to_datetime(df_reports['report_date'])
     
+    # 1. Temel Metrikler
     total_manpower = df_reports['actual_manpower'].sum()
     total_machine = df_reports['actual_machine_hours'].sum()
     total_cost = df_reports['cost'].sum() if 'cost' in df_reports else 0
@@ -221,15 +223,22 @@ elif reports:
     col3.metric("💰 Toplam Maliyet", f"{total_cost:,.0f} TL")
     col4.metric("📋 Toplam Aktivite", total_activities)
     
+    # 2. Son 7 Gün (DÜZELTİLDİ)
     st.subheader("📈 Son 7 Günlük İşçilik")
+    
+    # Bugünün tarihini al (datetime formatında)
     today = pd.Timestamp(datetime.date.today())
     seven_days_ago = today - pd.Timedelta(days=7)
+    
+    # Filtreleme
     mask = df_reports['report_date'] >= seven_days_ago
     last_7 = df_reports[mask]
     
     if not last_7.empty:
+        # Günlük toplamları hesapla
         daily = last_7.groupby(last_7['report_date'].dt.date)['actual_manpower'].sum().reset_index()
         daily.columns = ['tarih', 'işçilik']
+        
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.bar(daily['tarih'].astype(str), daily['işçilik'], color='#1E3D59')
         ax.set_xlabel('Tarih')
@@ -239,6 +248,7 @@ elif reports:
     else:
         st.info("Son 7 gün içinde veri yok.")
     
+    # 3. İş Türüne Göre Dağılım
     st.subheader("📊 İş Türüne Göre Toplam İşçilik")
     if 'trade' in df_reports.columns:
         trade_summary = df_reports.groupby('trade')['actual_manpower'].sum().reset_index()
@@ -252,14 +262,26 @@ elif reports:
     else:
         st.info("İş türü sütunu bulunamadı.")
     
-    with st.expander("📋 Son 10 Rapor"):
-        st.dataframe(df_reports.tail(10)[['report_date', 'activity', 'trade', 'actual_manpower']])
+    # 4. Hata Özeti
+    st.subheader("⚠️ Hata Özeti")
+    missing_count = df_reports.isnull().sum().sum()
+    if missing_count > 0:
+        st.warning(f"🔍 Verilerde {missing_count} adet eksik/boş değer bulundu.")
+        with st.expander("Detaylı Hata Raporu"):
+            st.dataframe(df_reports.isnull().sum().rename("Eksik Sayısı"))
+    else:
+        st.success("✅ Verilerde hata bulunamadı.")
+    
+    # 5. Son 10 Kayıt
+    with st.expander("📋 Son 10 Rapor Kaydı"):
+        st.dataframe(df_reports.tail(10)[['report_date', 'activity', 'trade', 'actual_manpower', 'actual_machine_hours']])
+        
 else:
-    st.info("Henüz bu projeye ait rapor yok.")
-
+    st.info("Henüz bu projeye ait rapor yok. Veri girişi yapın veya Excel yükleyin.")
+    
+    
+# --- LEAD CAPTURE (Email Toplama) ---
 st.divider()
-
-# --- LEAD CAPTURE (Supabase'e Kaydediyoruz) ---
 st.subheader("🚀 Ücretsiz Rapor Analizi İstiyorum")
 
 # Mevcut projedeki hata sayısını hesapla
@@ -309,18 +331,18 @@ with st.form("lead_capture_form"):
         if not lead_email or not lead_company:
             st.warning("Lütfen email ve şirket adını girin.")
         else:
-            # Supabase'e kaydet (Google Sheets yok!)
-            result, err = add_lead(
+            from utils.sheets import append_lead
+            success = append_lead(
+                "Site Report Leads",
                 lead_email.strip(),
                 lead_company.strip(),
-                lead_phone.strip(),
-                project_id,
+                selected_project,
                 error_count,
                 total_manhours
             )
-            if result:
+            if success:
                 st.success("✅ Başvurunuz alındı! Rapor analizinizi emailinize gönderiyoruz.")
                 st.balloons()
                 st.info("📧 Emailinizi kontrol edin. Önümüzdeki 24 saat içinde detaylı rapor gönderilecektir.")
             else:
-                st.error(f"❌ Kayıt sırasında bir sorun oluştu: {err}")
+                st.error("❌ Kayıt sırasında bir sorun oluştu. Lütfen tekrar deneyin.")

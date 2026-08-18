@@ -48,7 +48,9 @@ def get_user_projects():
         return None, str(e)
 
 def add_bulk_reports(project_id, df):
-    """DataFrame'deki tüm satırları toplu olarak daily_reports tablosuna ekler."""
+    """
+    DataFrame'deki tüm satırları toplu olarak daily_reports tablosuna ekler.
+    """
     supabase = get_supabase()
     try:
         records = []
@@ -79,24 +81,5 @@ def get_project_reports(project_id):
     try:
         response = supabase.table("daily_reports").select("*").eq("project_id", project_id).execute()
         return response.data, None
-    except Exception as e:
-        return None, str(e)
-
-def add_lead(email, company, project_id, error_count, total_manhours):
-    """Lead'i Supabase'e kaydet"""
-    supabase = get_supabase()
-    try:
-        # Verileri JSON uyumlu hale getir (int64 vb. sorunları çözmek için)
-        data = {
-            "email": str(email),
-            "company": str(company),
-            "phone": str(phone) if phone else None,  # Yeni alan
-            "project_id": str(project_id),
-            "error_count": int(error_count) if error_count is not None else 0,
-            "total_manhours": float(total_manhours) if total_manhours is not None else 0.0,
-            "status": "new"
-        }
-        response = supabase.table("leads").insert(data).execute()
-        return response.data[0], None
     except Exception as e:
         return None, str(e)

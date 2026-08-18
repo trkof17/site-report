@@ -3,7 +3,7 @@ from datetime import timedelta
 import streamlit as st
 import matplotlib.pyplot as plt
 from utils.auth import sign_up, sign_in, sign_out
-from utils.db import get_user_projects, create_project, add_daily_report, add_bulk_reports, get_project_reports
+from utils.db import get_user_projects, create_project, add_daily_report, add_bulk_reports, get_project_reports, add_lead
 from utils.parser import load_excel, detect_errors, calculate_metrics
 from utils.supabase_client import get_supabase
 

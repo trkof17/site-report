@@ -2,16 +2,13 @@ import streamlit as st
 import datetime
 import pandas as pd
 import plotly.express as px
-from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
-from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
-import base64
 from utils.db import get_user_projects, get_project_reports, supabase
 from utils.styles import apply_global_styles, render_top_navbar
 from utils.auth import get_current_user
+
+# Türkçe karakter desteği için
+import reportlab.rl_config
+reportlab.rl_config.warnOnMissingFontGlyphs = 0
 
 st.set_page_config(
     page_title="SARCON Portal | Rapor Al",
@@ -26,11 +23,11 @@ render_top_navbar()
 st.markdown("""
 <div style="border-left: 3px solid #3b82f6; padding-left: 0.8rem; margin-bottom: 1.5rem;">
     <h3 style="color: #ffffff; font-weight: 600; margin: 0; font-size: 1.3rem;">Rapor Oluştur</h3>
-    <p style="color: #737373; margin: 0; font-size: 0.8rem;">Proje verilerinizi PDF olarak alın</p>
+    <p style="color: #737373; margin: 0; font-size: 0.8rem;">Proje verilerinizi PDF olarak indirin</p>
 </div>
 """, unsafe_allow_html=True)
 
-# --- KULLANICI BİLGİSİ (Girişten otomatik) ---
+# --- KULLANICI BİLGİSİ ---
 user = get_current_user()
 user_email = user.email if user else "kullanici@example.com"
 
@@ -47,7 +44,7 @@ if not project_names:
 selected_project = st.selectbox("Proje Seçin", project_names)
 project_id = next(p["id"] for p in projects if p["project_name"] == selected_project)
 
-# --- RAPOR TÜRÜ SEÇİMİ ---
+# --- RAPOR KAPSAMI ---
 st.markdown("### Rapor Kapsamı")
 col_scope1, col_scope2 = st.columns(2)
 with col_scope1:
@@ -135,7 +132,7 @@ if not df_reports.empty:
                 fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='white')
                 st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
 
-# --- PDF OLUŞTUR ---
+# --- PDF OLUŞTUR (DÜZELTİLMİŞ) ---
 def generate_report_pdf(project_name, df_reports, df_resources, df_work):
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
@@ -149,7 +146,7 @@ def generate_report_pdf(project_name, df_reports, df_resources, df_work):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    # Türkçe karakter desteği
+    # Türkçe karakter desteği (Windows'ta calibri.ttf var, yoksa Helvetica kullan)
     try:
         pdfmetrics.registerFont(TTFont('Calibri', 'C:/Windows/Fonts/calibri.ttf'))
         font_name = 'Calibri'

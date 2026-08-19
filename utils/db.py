@@ -5,36 +5,35 @@ import streamlit as st
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-# .env dosyasını yükle (sadece local için)
-load_dotenv()
+# Windows kaçış karakteri (\t, \s vb.) çökmesini önlemek için düz bölü (/) kullanıyoruz:
+ENV_PATH = "C:/Users/taric/Desktop/saascon/site-report/.env"
+
+# .env dosyasını zorla ve ezerek yükle
+load_dotenv(dotenv_path=ENV_PATH, override=True)
 
 
 @st.cache_resource
 def init_supabase() -> Client:
-    """Supabase client'ı başlat (önce Secrets, sonra .env)"""
-    
-    # 1. YÖNTEM: Streamlit Cloud Secrets (öncelikli)
-    try:
-        if 'supabase' in st.secrets:
-            url = st.secrets['supabase']['url']
-            key = st.secrets['supabase']['anon_key']
-            if url and key:
-                return create_client(url, key)
-    except:
-        pass  # Secrets yoksa devam et
-    
-    # 2. YÖNTEM: .env dosyası (local)
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_ANON_KEY")
-    
+
+    # .env içinde bulunamazsa Streamlit Secrets alanını kontrol et
+    if not url or not key:
+        try:
+            url = url or st.secrets.get("SUPABASE_URL")
+            key = key or st.secrets.get("SUPABASE_ANON_KEY")
+        except Exception:
+            pass
+
     if not url or not key:
         st.error(
-            "⚠️ Supabase bağlantı bilgileri bulunamadı!\n\n"
-            "Cloud'da: Streamlit Secrets'a `supabase` bilgilerini ekleyin.\n"
-            "Local'de: `.env` dosyasını kontrol edin."
+            f"Supabase bağlantı bilgileri bulunamadı!\n\n"
+            f"Aranan .env Konumu: {ENV_PATH}\n\n"
+            f"Lütfen bu konumda .env dosyasının bulunduğundan ve içerisinde "
+            f"SUPABASE_URL ile SUPABASE_ANON_KEY değerlerinin yer aldığından emin olun."
         )
         st.stop()
-    
+
     return create_client(url, key)
 
 
@@ -47,6 +46,7 @@ supabase = init_supabase()
 
 @st.cache_data(ttl=600, show_spinner="Projeler yükleniyor...")
 def get_user_projects():
+    """Kullanıcıya ait projeleri getirir (10 dakika önbellek)."""
     try:
         response = (
             supabase.table("projects")
@@ -61,6 +61,7 @@ def get_user_projects():
 
 @st.cache_data(ttl=300, show_spinner="Raporlar analiz ediliyor...")
 def get_project_reports(project_id: int):
+    """Seçilen projenin raporlarını getirir (5 dakika önbellek)."""
     try:
         response = (
             supabase.table("daily_reports")
@@ -75,6 +76,7 @@ def get_project_reports(project_id: int):
 
 @st.cache_data(ttl=300)
 def get_work_progress_by_date(project_id: int, report_date: datetime.date):
+    """Belirli bir tarihteki iş ilerleme kayıtlarını getirir."""
     try:
         date_str = (
             report_date.strftime("%Y-%m-%d")
@@ -96,6 +98,7 @@ def get_work_progress_by_date(project_id: int, report_date: datetime.date):
 def get_previous_day_value(
     project_id: int, current_date: datetime.date, resource_type: str, item_name: str
 ) -> float:
+    """Bir önceki güne ait kaynak miktarını sorgular."""
     try:
         prev_date = current_date - datetime.timedelta(days=1)
         prev_date_str = prev_date.strftime("%Y-%m-%d")
@@ -105,7 +108,7 @@ def get_previous_day_value(
             .select("value")
             .eq("project_id", project_id)
             .eq("report_date", prev_date_str)
-            .eq("category", resource_type)
+            .eq("category", resource_type)  # DÜZELTİLDİ: resource_type → category
             .eq("item_name", item_name)
             .execute()
         )
@@ -120,6 +123,7 @@ def get_previous_day_value(
 def get_previous_day_progress(
     project_id: int, current_date: datetime.date, row_data: dict
 ) -> dict:
+    """Aynı mahal/iş türü için bir önceki gündeki ilerlemeyi sorgular."""
     try:
         prev_date = current_date - datetime.timedelta(days=1)
         prev_date_str = prev_date.strftime("%Y-%m-%d")
@@ -146,10 +150,11 @@ def get_previous_day_progress(
 
 
 # ==========================================
-# 2. YAZMA/GÜNCELLEME FONKSİYONLARI
+# 2. YAZMA/GÜNCELLEME FONKSİYONLARI (CACHE CLEARING)
 # ==========================================
 
 def create_project(project_name: str, start_date: str, end_date: str):
+    """Yeni proje ekler ve projeler önbelleğini temizler."""
     try:
         payload = {
             "project_name": project_name,
@@ -157,7 +162,10 @@ def create_project(project_name: str, start_date: str, end_date: str):
             "end_date": end_date,
         }
         res = supabase.table("projects").insert(payload).execute()
+
+        # Proje önbelleğini temizle (Yeni proje hemen görünsün)
         get_user_projects.clear()
+
         return res.data, None
     except Exception as e:
         return None, str(e)
@@ -169,15 +177,17 @@ def save_daily_resources(
     resource_type: str,
     resource_data: dict,
 ):
+    """Günlük kaynak verilerini (Endirekt, Direkt, Makine vb.) kaydeder veya günceller."""
     try:
         date_str = report_date.strftime("%Y-%m-%d")
 
+        # Mevcut kayıtları temizle
         (
             supabase.table("daily_resources")
             .delete()
             .eq("project_id", project_id)
             .eq("report_date", date_str)
-            .eq("category", resource_type)
+            .eq("category", resource_type)  # DÜZELTİLDİ: resource_type → category
             .execute()
         )
 
@@ -187,7 +197,7 @@ def save_daily_resources(
                 {
                     "project_id": project_id,
                     "report_date": date_str,
-                    "category": resource_type,
+                    "category": resource_type,  # DÜZELTİLDİ: resource_type → category
                     "item_name": item,
                     "value": qty,
                 }
@@ -196,16 +206,20 @@ def save_daily_resources(
         if insert_payload:
             supabase.table("daily_resources").insert(insert_payload).execute()
 
+        # Rapor önbelleğini temizle
         get_project_reports.clear()
+
         return True, None
     except Exception as e:
         return False, str(e)
 
 
 def save_work_progress(project_id: int, report_date: datetime.date, rows: list):
+    """Günlük iş ilerleme verilerini kaydeder."""
     try:
         date_str = report_date.strftime("%Y-%m-%d")
 
+        # O günkü eski verileri temizle
         (
             supabase.table("daily_work_progress")
             .delete()
@@ -218,18 +232,22 @@ def save_work_progress(project_id: int, report_date: datetime.date, rows: list):
             for r in rows:
                 r["project_id"] = project_id
                 r["report_date"] = date_str
+                # Beklenmeyen geçici sütunları temizle
                 r.pop("id", None)
 
             supabase.table("daily_work_progress").insert(rows).execute()
 
+        # İlgili sorgu önbelleklerini temizle
         get_work_progress_by_date.clear()
         get_project_reports.clear()
+
         return True, None
     except Exception as e:
         return False, str(e)
 
 
 def add_lead(email, company, phone, project_id, error_count, total_manhours):
+    """Yeni lead (müşteri adayı) ekler."""
     try:
         payload = {
             "email": email,

@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Aug 19 02:32:36 2026
-
-@author: taric
-"""
-
 import streamlit as st
 
 def apply_global_styles(is_login=False):
@@ -82,7 +75,7 @@ def apply_global_styles(is_login=False):
 
 
 def render_top_navbar():
-    """Üst navigasyon header - ÇIKIŞ SAĞ ÜSTE (app.py'ye yönlendirir)"""
+    """Üst navigasyon header - ÇIKIŞ SAĞ ÜSTE"""
     from utils.auth import sign_out
     
     col_left, col_spacer, col_right = st.columns([3, 1, 0.8])
@@ -102,8 +95,6 @@ def render_top_navbar():
     with col_right:
         if st.button("Çıkış", key="nav_logout", use_container_width=True):
             sign_out()
-            st.session_state.user = None
-            st.session_state.logged_in = False
-            st.switch_page("app.py")  # Giriş sayfasına yönlendir
+            st.rerun()
     
     st.markdown("<hr style='border-color: #262626; margin-top: 0.5rem; margin-bottom: 1.5rem;'>", unsafe_allow_html=True)

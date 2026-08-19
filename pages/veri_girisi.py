@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Aug 19 02:28:53 2026
-
 @author: taric
 """
 
 import streamlit as st
 import datetime
 import pandas as pd
+import numpy as np
 from utils.db import (
     get_user_projects, create_project, get_previous_day_value, 
-    save_daily_resources, get_work_progress_by_date, save_work_progress, get_previous_day_progress
+    save_daily_resources, get_work_progress_by_date, save_work_progress
 )
 from utils.lists import (
     ENDIRECT_PERSONEL, DIRECT_PERSONEL, YAPI_MALZEME, DEMIRBASLAR, 
@@ -107,7 +107,7 @@ if is_sunday:
 st.markdown("<hr style='border-color: #262626; margin: 1.2rem 0;'>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. KAYNAK GİRİŞİ (Tüm Türler İçin Dropdown + Yeni Ekleme)
+# 2. KAYNAK GİRİŞİ (Excel-like + Dropdown + Yeni Ekleme)
 # ==========================================
 st.subheader("1. Kaynak Girişi")
 
@@ -256,7 +256,7 @@ st.session_state.resource_rows = edited_resources_df.to_dict(orient="records")
 st.markdown("<hr style='border-color: #262626; margin: 1.5rem 0;'>", unsafe_allow_html=True)
 
 # ==========================================
-# 3. İŞ İLERLEME (NCR KALDIRILDI)
+# 3. İŞ İLERLEME (ESKİ HALİ - DOKUNULMADI)
 # ==========================================
 st.subheader("2. İş İlerleme")
 
@@ -311,7 +311,7 @@ if not edited_work_df.empty:
 st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
 
 # ==========================================
-# 4. TÜM VERİLERİ KAYDET
+# 4. TÜM VERİLERİ KAYDET (HATA DÜZELTİLDİ)
 # ==========================================
 if st.button("Tüm Verileri Kaydet", type="primary", use_container_width=True):
     # Kaynak verilerini kaydet
@@ -331,10 +331,39 @@ if st.button("Tüm Verileri Kaydet", type="primary", use_container_width=True):
     else:
         st.info("Kaynak verisi girilmedi.")
     
-    # İş ilerleme verilerini kaydet
+    # İş ilerleme verilerini kaydet (JSON uyumlu hale getir)
     if success:
         rows_to_save = edited_work_df.to_dict(orient="records") if not edited_work_df.empty else []
-        clean_rows = [r for r in rows_to_save if str(r.get("yapilan_is", "")).strip()]
+        clean_rows = []
+        
+        for r in rows_to_save:
+            # Boş satırları atla
+            if not str(r.get("yapilan_is", "")).strip():
+                continue
+            
+            # NaN ve inf değerleri 0 yap
+            for key in ["kesif_miktari", "yapilan_miktar", "ilerleme_yuzdesi"]:
+                val = r.get(key, 0)
+                if pd.isna(val) or np.isinf(val):
+                    r[key] = 0.0
+                else:
+                    r[key] = float(val) if val is not None else 0.0
+            
+            # Tüm alanları güvenli hale getir
+            r["bolge"] = str(r.get("bolge", "")) if r.get("bolge") else ""
+            r["blok"] = str(r.get("blok", "")) if r.get("blok") else ""
+            r["mahal"] = str(r.get("mahal", "")) if r.get("mahal") else ""
+            r["aks_x"] = str(r.get("aks_x", "")) if r.get("aks_x") else ""
+            r["aks_y"] = str(r.get("aks_y", "")) if r.get("aks_y") else ""
+            r["kot"] = str(r.get("kot", "")) if r.get("kot") else ""
+            r["is_turu"] = str(r.get("is_turu", "")) if r.get("is_turu") else ""
+            r["yapilan_is"] = str(r.get("yapilan_is", "")) if r.get("yapilan_is") else ""
+            r["alt_yuklenici"] = str(r.get("alt_yuklenici", "")) if r.get("alt_yuklenici") else ""
+            r["birim"] = str(r.get("birim", "")) if r.get("birim") else ""
+            r["wbs_kodu"] = str(r.get("wbs_kodu", "")) if r.get("wbs_kodu") else ""
+            r["butce_kodu"] = str(r.get("butce_kodu", "")) if r.get("butce_kodu") else ""
+            
+            clean_rows.append(r)
         
         if clean_rows:
             ok_w, err_w = save_work_progress(project_id, report_date, clean_rows)
@@ -345,4 +374,3 @@ if st.button("Tüm Verileri Kaydet", type="primary", use_container_width=True):
         else:
             st.info("İş ilerleme verisi girilmedi.")
         
-        st.balloons()

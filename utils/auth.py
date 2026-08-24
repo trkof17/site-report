@@ -29,17 +29,26 @@ def sign_in(email, password):
         return None, str(e)
 
 def sign_out():
-    """Çıkış yap ve session'ı temizle - KESİN ÇÖZÜM"""
+    """
+    Güvenli çıkış işlemi - Tüm session verilerini temizler
+    """
+    # 1. Supabase oturumunu kapat
     try:
         supabase = get_supabase()
         supabase.auth.sign_out()
     except:
-        pass
+        pass  # Supabase bağlı değilse hata verme
     
-    # Session'ı temizle
+    # 2. Tüm session_state anahtarlarını temizle
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     
+    # 3. Yeni bir session oluştur (temiz)
+    st.session_state.user = None
+    st.session_state.logged_in = False
+    
+    # 4. Login sayfasına yönlendir
+    st.switch_page("app.py")
     st.rerun()
 
 def get_current_user():

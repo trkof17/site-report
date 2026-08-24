@@ -1,60 +1,42 @@
 import streamlit as st
-
+from utils.animations import apply_animations  
 def apply_global_styles(is_login=False):
-    """Sistem genelindeki stil ve sidebar gizleme CSS kurallarını uygular."""
+    """Sistem genelindeki stil CSS kurallarını uygular."""
     hide_sidebar_css = """
     <style>
-        [data-testid="stSidebar"], section[data-testid="stSidebar"] {
-            display: none !important;
-            width: 0px !important;
-        }
-        [data-testid="collapsedControl"], button[kind="header"] {
-            display: none !important;
-        }
-        .main .block-container {
-            max-width: 1200px;
-            padding-top: 1.5rem;
-            padding-bottom: 2rem;
-        }
+        /* Ana içerik düzeni */
         .stApp {
             background-color: #0a0a0a !important;
         }
+        
+        /* Streamlit varsayılan menüsünü gizle */
+        #MainMenu { visibility: hidden !important; }
+        header { visibility: hidden !important; }
+        footer { visibility: hidden !important; }
+        .stDeployButton { display: none !important; }
+        .stApp > header { display: none !important; }
+        
+        /* ========================================== */
+        /* INPUT ALANLARI */
+        /* ========================================== */
         .stTextInput > div > div > input {
             background-color: #1a1a1a !important;
             color: #ffffff !important;
             border: 1px solid #333333 !important;
             border-radius: 8px !important;
         }
-        .stSelectbox > div > div > select {
-            background-color: #1a1a1a !important;
+        .stTextInput > div > div > input:focus {
+            border-color: #555555 !important;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+        }
+        .stTextInput > label {
             color: #ffffff !important;
-            border: 1px solid #333333 !important;
-            border-radius: 8px !important;
+            font-weight: 500 !important;
         }
-        .stDateInput > div > div > input {
-            background-color: #1a1a1a !important;
-            color: #ffffff !important;
-            border: 1px solid #333333 !important;
-            border-radius: 8px !important;
-        }
-        .stNumberInput > div > div > input {
-            background-color: #1a1a1a !important;
-            color: #ffffff !important;
-            border: 1px solid #333333 !important;
-            border-radius: 8px !important;
-        }
-        .stDataFrame {
-            background-color: #0a0a0a !important;
-        }
-        .stDataFrame thead tr th {
-            background-color: #1a1a1a !important;
-            color: #ffffff !important;
-        }
-        .stDataFrame tbody tr td {
-            background-color: #0a0a0a !important;
-            color: #ffffff !important;
-            border-bottom: 1px solid #1a1a1a !important;
-        }
+        
+        /* ========================================== */
+        /* BUTONLAR */
+        /* ========================================== */
         div.stButton > button {
             background-color: #000000 !important;
             color: #ffffff !important;
@@ -69,32 +51,102 @@ def apply_global_styles(is_login=False):
             background-color: #1a1a1a !important;
             border-color: #555555 !important;
         }
+        
+        /* ========================================== */
+        /* TABS - Giriş Yap / Kayıt Ol */
+        /* ========================================== */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 6px;
+            padding: 8px 16px;
+            color: #a3a3a3 !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: transparent !important;
+        }
+        .stTabs [data-baseweb="tab"]:hover {
+            color: #ffffff !important;
+            background-color: #2a2a2a !important;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+        }
+        .stTabs [data-baseweb="tab-panel"] {
+            background-color: #0a0a0a !important;
+            padding: 1rem 0 !important;
+        }
+        .stTabs [role="tabpanel"] {
+            background-color: #0a0a0a !important;
+        }
+        .stTabs div {
+            background-color: #0a0a0a !important;
+        }
+        
+        /* ========================================== */
+        /* ALERT MESAJLARI */
+        /* ========================================== */
+        .stAlert {
+            border-radius: 6px !important;
+            background-color: #1a1a1a !important;
+            border-left: 4px solid #555555 !important;
+        }
+        .stAlert > div {
+            color: #ffffff !important;
+        }
+        
+        /* ========================================== */
+        /* TABLO */
+        /* ========================================== */
+        .stDataFrame {
+            background-color: #0a0a0a !important;
+        }
+        .stDataFrame thead tr th {
+            background-color: #1a1a1a !important;
+            color: #ffffff !important;
+        }
+        .stDataFrame tbody tr td {
+            background-color: #0a0a0a !important;
+            color: #ffffff !important;
+            border-bottom: 1px solid #1a1a1a !important;
+        }
+        
+        /* ========================================== */
+        /* SCROLLBAR */
+        /* ========================================== */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #555555;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777777;
+        }
+    """
+    
+    # Login sayfasında sidebar'ı gizle
+    if is_login:
+        hide_sidebar_css += """
+        [data-testid="stSidebar"] {
+            display: none !important;
+            width: 0px !important;
+        }
+        """
+    
+    hide_sidebar_css += """
     </style>
     """
     st.markdown(hide_sidebar_css, unsafe_allow_html=True)
-
-
-def render_top_navbar():
-    """Üst navigasyon header - ÇIKIŞ SAĞ ÜSTE"""
-    from utils.auth import sign_out
     
-    col_left, col_spacer, col_right = st.columns([3, 1, 0.8])
-    
-    with col_left:
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
-        with col_btn1:
-            if st.button("Özet", key="nav_dash", use_container_width=True):
-                st.switch_page("pages/dashboard.py")
-        with col_btn2:
-            if st.button("Veri Girişi", key="nav_data", use_container_width=True):
-                st.switch_page("pages/veri_girisi.py")
-        with col_btn3:
-            if st.button("Rapor Al", key="nav_report", use_container_width=True):
-                st.switch_page("pages/rapor_al.py")
-    
-    with col_right:
-        if st.button("Çıkış", key="nav_logout", use_container_width=True):
-            sign_out()
-            st.rerun()
-    
-    st.markdown("<hr style='border-color: #262626; margin-top: 0.5rem; margin-bottom: 1.5rem;'>", unsafe_allow_html=True)
+    apply_animations()

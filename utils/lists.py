@@ -63,3 +63,25 @@ MAKINA = [
 ]
 
 IS_TURLERI = ["Kaba İşler", "İnce İşler", "Mekanik", "Elektrik", "Peyzaj", "Diğer"]
+
+# ==========================================
+# YENİ EKLENEN LİSTELER
+# ==========================================
+
+HARCAMA_TURLERI = [
+    "Belgelendirme",
+    "Ofis Giderleri",
+    "Seyahat",
+    "Egitim",
+    "Danismanlik",
+    "Test ve Muayene",
+    "Is Sagligi ve Guvenligi",
+    "Cevre",
+    "Diger"
+]
+
+WBS_KODLARI = [
+    "WBS-001", "WBS-002", "WBS-003", "WBS-004", "WBS-005",
+    "WBS-006", "WBS-007", "WBS-008", "WBS-009", "WBS-010",
+    "WBS-011", "WBS-012", "WBS-013", "WBS-014", "WBS-015"
+]
